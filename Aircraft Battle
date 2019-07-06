@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style>
+			canvas{
+				display: block;
+				margin: 0 auto;
+			}
+			
+		</style>
+		
+	</head>
+	<script src="js/demo.js" async></script>
+	<body>
+		<canvas  width="480" height="650" id="canvas"></canvas>			
+		
+		
+		
+	</body>
+</html>
+		
+			//初始化，定义五个阶段，五个阶段分别
+		const START = 0;      //开始界面
+		const STARTING = 1;    //开始到游戏运行的过度阶段
+		const RUNNING = 2;     //游戏运行阶段
+		const PAUSE = 3;       //暂停时的阶段
+		const GAMEOVER = 4;    //结束阶段
+		const HEIGHT = 650;
+		const WIDTH = 480;
+		var start = START;
+		var life = 3;   //生命值
+		var score = 0;   //分数
+		var canvas = document.getElementById("canvas");
+		var cantext = canvas.getContext("2d")
+		var bg = new Image();
+		bg.src = "images/background.png";
+		 
+		//第一阶段，建立画布 ，添加背景和logo
+	    //背景为流动背景，通过创建对象，及对像的构造函数进行绘制，和操作
+		var BG = {			//将背景图片和相关的属性传入对象中
+			img : bg,       
+			height : 852,
+			width : 480
+		}
+		
+		function Bg (config) {        //将对象传入构造函数中进行定义绘制方法及背景流动的逻辑算法
+			this.img = config.img;
+			this.width = config.width;
+			this.height = config.height;			
+			this.x1  = 0;    //设定有两张相同的背景图片进行轮番，他们的x坐标为0，y坐标进行++实现循环流动效果
+			this.x2 =0;       
+			this.y1 =0;
+			this.y2 = -this.height;   //第一张背景图片的起始坐标为（0，0），设定另一张的起始位置为（0，-图片高度）
+			
+			//定义绘制方法
+			this.pint = function(){   //同时绘制两张背景图，绘制的坐标分别为（0，0）（0，-图片高度）
+				cantext.drawImage(this.img,this.x1,this.y1)
+				cantext.drawImage(this.img,this.x2,this.y2)
+			}
+			this.spet = function(){   
+				this.y1++;             //一张背景开始向下流动，另一张也同时向下流动
+				this.y2++;
+				if(this.y1 == 0){       //当一张流动完后再将坐标回到(0,-图片高度)，以此类推实现无限循环
+					this.y2=-this.height;
+				}
+				if(this.y2 == 0){
+					this.y1=-this.height;
+				}
+			}
+		} 
+				   	   
+	var abc = new Bg(BG);              
+	var logo =new Image()    //logo
+	    logo.src ="images/start.png";
+	canvas.onclick = function(){    //点击画布后第一阶段完成，进入第二阶段
+		if(start==START){
+		start = STARTING;
+		}
+		
+	}
+	 
+	 
+	 
+	 
+	 //第二阶段开始	
+	 //分别将四张图片创建添加到数组
+	var lists = [];
+	lists[0] = new Image();
+	lists[0].src = "images/game_loading1.png"	
+	lists[1] = new Image();
+	lists[1].src = "images/game_loading2.png"
+    lists[2] = new Image();
+	lists[2].src = "images/game_loading3.png"	
+	lists[3] = new Image();
+	lists[3].src = "images/game_loading4.png"
+
+	//将数组添加至对象中，并将图片和数组数据添加至对象
+	
+	var listObj = {
+		img:lists, 
+		length:4,
+		width:186,
+		height:38		
+	}
+	//将对象属性传入构造器，做为构造器所创建实例的属性，并给实例添加绘制和运动方法，
+	//通过将实例方法放入定时器，实现动画效果
+			
+	function Startting(config){
+		this.img =config.img;
+		this.length = config.length;
+		this.width =config.width;
+		this.height = config.height;
+		this.index = 0;
+		this.time = 0;
+		this.pint = function(){		
+		//获取图片及坐标，将图片绘制	
+	    cantext.drawImage(this.img[this.index],0,HEIGHT-this.height)            
+		}
+		this.step = function(){
+			//通过定时器的调用，数组中的图片依次绘制实现运动效果
+			this.time++
+			if(this.time%3==0){
+
+			this.index++;
+			}
+			if(this.index == 4){
+				//当图片依次绘制完后将进入游戏运行中
+				start=RUNNING;
+			}
+		}
+	}
+	
+	var def =new Startting(listObj)
+	
+	
+	
+	//3  第三阶段 游戏运行中
+	//3.1绘制我方飞机，分别有两种状态，正常飞行和被碰撞时的状态
+	//3.2绘制我方飞机的子弹，判断是否撞击敌机
+	//3.3绘制敌方飞机，分别有小中大三种
+	//3.4检测敌机是否被撞击
+	//
+	//
+	//思路：
+	//分别有我方飞机的状态，正常飞行，被敌机撞击
+	//敌机（三种敌机）的状态，正常飞行，被敌机撞击
+	//子弹的状态，正常飞行，撞击敌机
+	//几种状态的判断条件
+	//
+	//
+	var heros = [];
+	
+	//我方飞机的动画
+	heros[0] = new Image();  
+	heros[0].src = "images/hero1.png";
+	heros[1] = new Image();
+	heros[1].src = "images/hero2.png";
+	
+	
+	//敌方飞机的动画
+	heros[2] = new Image();
+	heros[2].src = "images/hero_blowup_n1.png";
+	heros[3] = new Image();
+	heros[3].src = "images/hero_blowup_n2.png";
+	heros[4] = new Image();
+	heros[4].src = "images/hero_blowup_n3.png";
+	heros[5] = new Image();
+	heros[5].src = "images/hero_blowup_n4.png";
+	//我方飞机的初始数据
+	var HEROS = {
+		imgs:heros,
+		length:heros.length,
+		width:99,
+		height:124,
+		frame:2  //分别有两种状态
+	}
+	
+	//我方飞机的构造函数，用来绘制出我方飞机及我方飞机的子弹
+	//包括绘制我方飞机用的到的所有数据
+	function Hero (config) {
+		this.imgs  = config.imgs;
+		this.length = config.length;
+		this.width  = config.width;
+		this.height = config.height;
+		this.startindex = 0;  
+		this.frame = config.frame;
+		this.x = WIDTH/2 - config.width/2;//飞机的坐标
+		this.y = HEIGHT - this.height-30;
+		this.down = false;//用于判断我方飞机是否碰撞
+		this.candel = false;//用于判断碰撞后的动画效果是否执行完
+		//我方飞机绘制
+		this.paint = function  () {
+			cantext.drawImage(this.imgs[this.startindex],this.x,this.y);
+		}
+		//我方飞机运动
+		this.step = function(){
+			//检测我方飞机是否碰撞，并给出效果
+			if(!this.down){
+				//正常飞行时的动画效果
+				if(this.startindex ==0){
+					this.startindex = 1;
+				}else{
+					this.startindex = 0;
+				}
+			}else{ //碰撞时的动画效果，及生命值判断
+				this.startindex++; //
+				if(this.startindex == this.length){
+					life--;//没碰撞一次则生命值减一
+					if(life == 0){
+						start = GAMEOVER;//当生命值没有时到结束游戏阶段
+
+						this.startindex = this.length - 1;
+						//保留最后一张坠毁图片
+					}else{
+						//还有生命则继续下局
+							hero = new Hero(HEROS);
+						}				
+				}
+			}
+		}
+		this.time = 0;  //用于控制子弹速度
+		//我方飞机射击方法，将子弹的构造方法存入数组，到后面再进行调用	
+		this.shoot = function  () {
+			this.time++;
+			if(this.time %3 ==0){
+				//将构造好的子弹加入到数组中去，用于后续调用
+				bullets.push(new Bullet(BULLET))
+			}		
+		}
+		//我方飞机碰撞后判断动画执行完毕后进行调用
+		this.bang = function(){
+			this.down = true;
+		}
+				
+	}
+	
+	var hero = new Hero(HEROS)
+	
+	//飞机随鼠标移动
+	canvas.onmousemove = function(event){
+		if(start == RUNNING){
+			//当进入第三阶段后，获取到鼠标的坐标，计算后给到飞机的坐标
+			var x = event.offsetX;
+			var y = event.offsetY;
+			hero.x = x - hero.width/2;
+			hero.y = y - hero.height/2;			
+		}
+	}
+	
+	
+	
+	
+	//绘制子弹
+	//加载子弹图片
+	var bullet = new Image();
+	bullet.src = "images/bullet1.png";
+	//子弹的数据
+	var BULLET = {
+		imgs:bullet,
+		width:9,
+		height:21
+	}
+	//构造子弹
+	function Bullet (config) {
+		this.imgs = config.imgs;
+		this.height = config.height;
+		this.width = config.width;
+		//子弹的坐标
+		this.x = hero.x + hero.width/2 - this.width/2; 
+		this.y = hero.y - this.height;
+		//绘制子弹
+		this.paint = function(){
+			cantext.drawImage(this.imgs,this.x,this.y);	
+		}
+		//绘制
+	
+		this.step = function(){
+			//子弹的运动轨迹沿y直线运动，
+		
+		
+			this.y -= 20;	
+					
+		}
+		//判断是否碰撞
+		this.candel = false;
+		//碰击的方法，用于修改子弹是否碰撞的属性
+		this.bang = function(){
+			this.candel = true;
+		}
+	}
+    	
+	//增加一个数组，用于存储子弹
+	var bullets = [];
+	//绘制数组中的所有子弹，封装为函数方便调用
+	function bulletsPaint () {
+		for(var i= 0; i < bullets.length ; i++){
+			bullets[i].paint()
+		}
+	}	
+	//绘制数组所有的子弹的运动
+	function bulletsStep () {
+		for(var i= 0; i <bullets.length; i++){
+			bullets[i].step();
+		}
+	}
+	
+	//当子弹移出画布时和发生碰撞时，要把子弹从数组中删除
+	function bulletsDel(){
+		for (var i = 0 ;i<bullets.length ;i++ ) {
+			//用子弹的y坐标判断是否移出画布，用candel的值判断是否发生碰撞
+			if(bullets[i].y < -bullets[i].height || bullets[i].candel){
+				bullets.splice(i,1);
+			}
+		}
+	}
+	
+	//绘制敌方飞机
+	//加载敌方飞机的图片，区分不同的飞机
+	var enemy1 = [];
+		enemy1[0] = new Image();
+		enemy1[0].src = "images/enemy1.png";
+		enemy1[1] = new Image();
+		enemy1[1].src = "images/enemy1_down1.png";
+		enemy1[2] = new Image();
+		enemy1[2].src = "images/enemy1_down2.png";
+		enemy1[3] = new Image();
+		enemy1[3].src = "images/enemy1_down3.png";
+		enemy1[4] = new Image();
+		enemy1[4].src = "images/enemy1_down4.png";
+		// 中飞机
+		var enemy2 = [];
+		enemy2[0] = new Image();
+		enemy2[0].src = "images/enemy2.png";
+		enemy2[1] = new Image();
+		enemy2[1].src = "images/enemy2_down1.png";
+		enemy2[2] = new Image();
+		enemy2[2].src = "images/enemy2_down2.png";
+		enemy2[3] = new Image();
+		enemy2[3].src = "images/enemy2_down3.png";
+		enemy2[4] = new Image();
+		enemy2[4].src = "images/enemy2_down4.png";
+		// 大飞机
+		var enemy3 = [];
+		enemy3[0] = new Image();
+		enemy3[0].src = "images/enemy3_n1.png";
+		enemy3[1] = new Image();
+		enemy3[1].src = "images/enemy3_n2.png";
+		enemy3[2] = new Image();
+		enemy3[2].src = "images/enemy3_down1.png";
+		enemy3[3] = new Image();
+		enemy3[3].src = "images/enemy3_down2.png";
+		enemy3[4] = new Image();
+		enemy3[4].src = "images/enemy3_down3.png";
+		enemy3[5] = new Image();
+		enemy3[5].src = "images/enemy3_down4.png";
+		enemy3[6] = new Image();
+		enemy3[6].src = "images/enemy3_down5.png";
+		enemy3[7] = new Image();
+		enemy3[7].src = "images/enemy3_down6.png";
+	
+	//分别初始化敌方飞机的数据
+	//
+	var ENEMY1 = {
+		imgs: enemy1,
+		length:enemy1.length,
+		width:57,
+		height:51,
+		type : 1,//用于区分敌方飞机的类型
+		frame : 1,
+		life : 1,  //敌方飞机的生命值
+		score : 1  //击毁敌方飞机所得的分数		
+	}
+	var ENEMY2 = {
+			imgs : enemy2,
+			length : enemy2.length,
+			width : 69,
+			height : 95,
+			type : 2,   
+			frame : 1,
+			life : 5,
+			score : 5
+		}
+		var ENEMY3 = {
+			imgs : enemy3,
+			length : enemy3.length,
+			width : 169,
+			height : 258,
+			type : 3,   
+			frame : 2,
+			life : 10,
+			score : 10
+		}
+	
+	//敌方飞机的构造函数
+	function Enemy(config){
+		this.imgs = config.imgs;
+		this.length = config.length;
+		this.width = config.width;
+		this.height = config.height;
+		this.type = config.type;
+		this.frame = config.frame;
+		this.life = config.life;
+		this.score = config.score;		
+		//敌机出现的坐标，绘制敌机的x坐标不能大于WIDTH-敌机自身宽度，且x位置随机
+		this.x = Math.random()*(WIDTH - this.width);
+		this.y = -this.height;
+		this.startindex = 0;
+//		增加标识,表示飞机没有发生碰撞
+		this.down = false;
+		//增加一个标识，表示飞机碰撞以后，碰撞的动画是否执行完成
+		this.candel = false;
+		//绘制敌机
+		this.paint = function(){ 
+			cantext.drawImage(this.imgs[this.startindex],this.x,this.y);
+		}
+		//敌方飞机运动
+		this.step = function(){
+			if(!this.down){				
+				this. startindex++;
+				//用飞机的状态取下标的摸，小飞机和中飞机的动画效果只有一种状态，而大飞机的动画效果则是两张图片不停切换实现
+				this.startindex = this.startindex % this.frame;
+				this.y++;
+			}else{
+				//当飞机撞击后
+				this.startindex++;
+				if (this.startindex == this.length) {
+					//当坠机动画完成后执行
+                   this.candel = true;
+                    this.startindex = this.length - 1;
+				} 
+			}			
+		}
+		this.checkHit = function(zd){   //这个参数可能是子弹，可能是我方飞机
+				return zd.y + zd.height > this.y
+				&& zd.x + zd.width > this.x
+				&& zd.y < this.y + this.height
+				&& zd.x < this.x + this.width
+			}
+		//撞击的方法，用于修改飞机是否碰撞的属性
+		this.bang = function(){
+			this.life--;
+			if (this.life == 0) {
+				this.down = true;
+				score +=this.score;
+			}
+		}				
+	}
+	
+	//创建数组，用于储存敌方飞机
+	var enemies = [];
+	//数组中去按照一定随机添加飞机，
+	function pushEnemies(){
+       var numRand = Math.floor(Math.random()*100)
+       if (numRand < 10) {
+            enemies.push(new Enemy(ENEMY1))
+       } else if(numRand > 98){
+           enemies.push(new Enemy(ENEMY2))
+
+       } else if(numRand == 50){
+       	  enemies.push(new Enemy(ENEMY3))
+       }
+	}
+	
+	
+	//调用构造函数构造出飞机和飞机的方法
+	//
+	//绘制数组中敌方飞机
+	function paintEnemies(){
+		for (var i = 0; i < enemies.length; i++) {
+			enemies[i].paint()
+		}
+	}
+
+    //敌方飞机的运动函数
+    function stepEnemies(){
+      for (var i = 0; i < enemies.length; i++) {
+      	enemies[i].step()
+      }
+
+    }
+
+    //敌机的删除函数
+    function delEnemies(){
+      for (var i = 0; i < enemies.length; i++) {
+          //分为两种情况，一种是被撞击，还有一种是飞出画布
+          if (enemies[i].y > HEIGHT  || enemies[i].candel == true) {
+          	enemies.splice(i,1);          	
+          }
+      }     
+    }
+
+    //检测敌机是否被撞击
+    function hitEnemies(){
+			for(var i = 0;i < enemies.length;i++){
+				// 自己飞机撞上则执行敌机碰撞后和自己飞机碰撞后的动画
+				if(enemies[i].checkHit(hero)){
+					enemies[i].bang();
+					hero.bang();
+				}
+				// 子弹碰撞敌机则是敌机和子弹碰撞后的动画效果执行
+				for(var j = 0;j < bullets.length;j++){
+					if(enemies[i].checkHit(bullets[j])){
+						enemies[i].bang();
+						bullets[j].bang();
+					}
+				}
+			}
+		}
+	
+	//添加分数和生命值	     
+    function painText(){
+       cantext.font = "bold 50px 微软雅黑";
+       cantext.fillText("SCORE" + score,20,40);
+       cantext.fillText("LIFE:" + life,300,40);
+    }
+   
+   //4，第四阶段 游戏暂停
+  //当鼠标移出画布游戏暂停
+  //暂停时应所有飞机都停止运动
+  
+    canvas.onmouseout = function(){
+          if (start == RUNNING) {
+          	start = PAUSE;
+          }
+    }
+    //当鼠标移入时开始游戏
+    canvas.onmouseover = function(){
+    	if (start == PAUSE) {
+    		start = RUNNING;
+    	}
+    }
+  //添加暂停加载的图片
+    var pause = new Image();
+        pause.src = "images/game_pause_nor.png";
+
+   //5.第五的阶段，游戏结束的动画
+   //结束游戏时的字体及位置   
+     function paintOver(){
+     	cantext.font = "bold 50px 微软雅黑";
+		cantext.fillText("GAME OVER!!!",50,250);
+     }
+
+	     
+		 setInterval(function(){	
+		 //背景流动图片与游戏的各个阶段区分开，不受游戏状态的影响	
+		 	abc.pint()
+		 	abc.spet()
+		 switch (start){
+		 	case START:
+		 	//开始阶段，添加logo		 	
+		 	cantext.drawImage(logo,40,0)
+		 		break;
+		 	case STARTING:
+		 	//第二阶段，开始阶段到运行阶段的过渡
+		 	def.pint()
+		 	def.step()
+		 		break;
+		 	case RUNNING:
+
+		 	//第三阶段需要考虑有我方飞机的状态，敌方飞机的状态，子弹的状态，分值，生命值，
+		 	//我方飞机移动随鼠标移动
+		 
+		 	//我方飞机
+		 	hero.paint()
+		 	hero.step()
+		 	hero.shoot();
+
+		 	
+		 	//子弹
+		 	bulletsPaint();
+			bulletsStep();
+			bulletsDel();
+
+			//敌方飞机
+			pushEnemies()
+			paintEnemies()
+            stepEnemies()
+            delEnemies()
+            hitEnemies()
+            painText()
+
+		 		break;
+ 	       case PAUSE:		
+
+           //第四阶段鼠标移出暂停状态，画布内所有子弹，飞机停止运动
+ 	        hero.paint();
+            bulletsPaint();
+            paintEnemies();
+            painText()
+            cantext.drawImage(pause,150,350)  
+		 		break;
+		 	case GAMEOVER:
+		 	//第五阶段游戏结束
+                    hero.paint();
+					bulletsPaint();
+					paintEnemies();
+					painText()
+					paintOver()
+		 		break;	
+		  }		 	
+		},10)
+	
